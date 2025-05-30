@@ -32,7 +32,7 @@ const usageMsg = `[*] USAGE: ${basePath}?channel=<CHANNEL_NAME>&binaryType=<BINA
     ..
 `;
 
-const hostPath = "https://setup-cfly.rbxcdn.com"; // Only the cachefly mirror has proper CORS cfg
+const hostPath = "https://d19ha9ylcjiuiu.cloudfront.net"; // This has proper CORS cfg
 
 // Root extract locations for the Win manifests
 const extractRoots = {
