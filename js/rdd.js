@@ -1,5 +1,5 @@
 /*
-    rdd - https://github.com/latte-soft/rdd
+    rdd - https://github.com/ActualMasterOogway/rdd
 
     Copyright (C) 2024-2026 Latte Softworks <latte.to> | MIT License
 */
@@ -134,6 +134,7 @@ const binaryTypes = {
     },
 }
 
+// Engine files not listed in WebClient.metadata.json
 const webClientEngineFiles = [
     "WasmPlayer.js",
     "WebClient.js",
@@ -247,6 +248,27 @@ function downloadBinaryFile(fileName, data, mimeType = "application/zip") {
     scrollToBottom();
 
     button.click();
+};
+
+function exportAndDownloadZip(outputFileName) {
+    log();
+    if (compressZip) {
+        log(`[!] NOTE: Compressing final zip (with a compression level of ${compressionLevel}/9), this may take a minute`);
+    }
+
+    log(`[+] Exporting assembled zip file "${outputFileName}".. `, "");
+
+    zip.generateAsync({
+        type: "arraybuffer",
+        compression: compressZip ? "DEFLATE" : "STORE",
+        compressionOptions: {
+            level: compressionLevel
+        }
+    }).then(function(outputZipData) {
+        zip = null;
+        log("done!");
+        downloadBinaryFile(outputFileName, outputZipData);
+    });
 };
 
 function requestBinary(url, callback) {
@@ -381,7 +403,7 @@ function main() {
 
     // At this point, we expect `binaryType` to be defined
     if (! binaryType) {
-        log("[!] Error: Missing required \`binaryType\` query, are you using an old perm link for a specific version?", "\n\n");
+        log("[!] Error: Missing required `binaryType` query, are you using an old perm link for a specific version?", "\n\n");
         log(usageMsg, "\n", false);
         return;
     }
@@ -536,26 +558,7 @@ async function downloadZipsFromManifest(manifestBody) {
             return;
         }
 
-        // Now, we can export and download the complete zip
-        const outputFileName = `${channel}-${binaryType}-${version}.zip`;
-        log();
-        if (compressZip) {
-            log(`[!] NOTE: Compressing final zip (with a compression level of ${compressionLevel}/9), this may take a minute`);
-        }
-
-        log(`[+] Exporting assembled zip file "${outputFileName}".. `, "");
-
-        zip.generateAsync({
-            type: "arraybuffer",
-            compression: compressZip ? "DEFLATE" : "STORE",
-            compressionOptions: {
-                level: compressionLevel
-            }
-        }).then(function(outputZipData) {
-            zip = null;
-            log("done!");
-            downloadBinaryFile(outputFileName, outputZipData);
-        });
+        exportAndDownloadZip(`${channel}-${binaryType}-${version}.zip`);
     };
 
     checkIfNoThreadsLeft();
@@ -605,7 +608,7 @@ async function downloadPackage(packageName, doneCallback, getThreadsLeft) {
 };
 
 async function downloadWebClient() {
-    const webClientPath = `${hostPath}${blobDir}${version}-RobloxWebClient/`;
+    const webClientPath = `${versionPath}RobloxWebClient/`;
 
     log(`[+] Fetching WebClient.metadata.json for ${version}..`);
     const resp = await fetch(webClientPath + "WebClient.metadata.json");
@@ -656,24 +659,6 @@ async function downloadWebClient() {
     }
     await Promise.all(threads);
 
-    const outputFileName = `${channel}-${binaryType}-${version}.zip`;
     log(`[+] Downloaded ${filesDone}/${files.length} files`);
-    log();
-    if (compressZip) {
-        log(`[!] NOTE: Compressing final zip (with a compression level of ${compressionLevel}/9), this may take a minute`);
-    }
-
-    log(`[+] Exporting assembled zip file "${outputFileName}".. `, "");
-
-    zip.generateAsync({
-        type: "arraybuffer",
-        compression: compressZip ? "DEFLATE" : "STORE",
-        compressionOptions: {
-            level: compressionLevel
-        }
-    }).then(function(outputZipData) {
-        zip = null;
-        log("done!");
-        downloadBinaryFile(outputFileName, outputZipData);
-    });
+    exportAndDownloadZip(`${channel}-${binaryType}-${version}.zip`);
 };
