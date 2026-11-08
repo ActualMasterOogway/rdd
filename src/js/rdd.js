@@ -12,6 +12,7 @@ const usageMsg = `[*] USAGE: ${basePath}?channel=<CHANNEL_NAME>&binaryType=<BINA
     * WindowsStudio64
     * MacPlayer
     * MacStudio
+    * WebClientApp
 
     Extra Notes:
     * If \`channel\` isn't provided, it will default to "LIVE" (the production channel)
@@ -126,7 +127,19 @@ const binaryTypes = {
           "x86-64": "/mac/"
         }
     },
+    WebClientApp: {
+        blobDirs: {
+          "wasm32": "/webclient/"
+        }
+    },
 }
+
+const webClientEngineFiles = [
+    "WasmPlayer.js",
+    "WebClient.js",
+    "WebClient.wasm",
+    "audio-processor-fast.js"
+];
 
 const urlParams = new URLSearchParams(window.location.search);
 
@@ -428,6 +441,8 @@ async function fetchManifest() {
             log("done!");
             downloadBinaryFile(outputFileName, zipData);
         });
+    } else if (binaryType === "WebClientApp") {
+        downloadWebClient();
     } else {
         // Now, we're only dealing with Windows bin logic
         log(`[+] Fetching rbxPkgManifest for ${version}@${channel}..`);
@@ -586,5 +601,79 @@ async function downloadPackage(packageName, doneCallback, getThreadsLeft) {
 
         log(`[+] Extracted "${packageName}"! (Packages left: ${getThreadsLeft()})`);
         doneCallback();
+    });
+};
+
+async function downloadWebClient() {
+    const webClientPath = `${hostPath}${blobDir}${version}-RobloxWebClient/`;
+
+    log(`[+] Fetching WebClient.metadata.json for ${version}..`);
+    const resp = await fetch(webClientPath + "WebClient.metadata.json");
+    if (! resp.ok) {
+        log(`[!] Failed to fetch WebClient.metadata.json: (status: ${resp.status})`);
+        return;
+    }
+
+    const metadataBody = await resp.text();
+    const files = webClientEngineFiles.concat(JSON.parse(metadataBody).map(entry => entry.path.replace(/^\//, "")));
+
+    zip = new JSZip();
+    zip.file("WebClient.metadata.json", metadataBody);
+
+    log(`[+] Fetching ${files.length} files for BinaryType \`${binaryType}\`..`);
+
+    let fileIndex = 0;
+    let filesDone = 0;
+
+    async function downloadNextFiles() {
+        while (fileIndex < files.length) {
+            const filePath = files[fileIndex++];
+            const fileUrl = webClientPath + filePath.split("/").map(encodeURIComponent).join("/");
+
+            try {
+                const fileResp = await fetch(fileUrl);
+                if (! fileResp.ok) {
+                    log(`[!] Binary request error (${fileResp.status}) @ ${fileUrl}`);
+                    continue;
+                }
+
+                zip.file(filePath, await fileResp.arrayBuffer());
+            } catch (err) {
+                log(`[!] Binary request error @ ${fileUrl} - ${err}`);
+                continue;
+            }
+
+            filesDone += 1;
+            if (filesDone % 250 === 0) {
+                log(`[+] Downloaded ${filesDone}/${files.length} files..`);
+            }
+        }
+    };
+
+    let threads = [];
+    for (let i = 0; i < 16; i++) {
+        threads.push(downloadNextFiles());
+    }
+    await Promise.all(threads);
+
+    const outputFileName = `${channel}-${binaryType}-${version}.zip`;
+    log(`[+] Downloaded ${filesDone}/${files.length} files`);
+    log();
+    if (compressZip) {
+        log(`[!] NOTE: Compressing final zip (with a compression level of ${compressionLevel}/9), this may take a minute`);
+    }
+
+    log(`[+] Exporting assembled zip file "${outputFileName}".. `, "");
+
+    zip.generateAsync({
+        type: "arraybuffer",
+        compression: compressZip ? "DEFLATE" : "STORE",
+        compressionOptions: {
+            level: compressionLevel
+        }
+    }).then(function(outputZipData) {
+        zip = null;
+        log("done!");
+        downloadBinaryFile(outputFileName, outputZipData);
     });
 };
