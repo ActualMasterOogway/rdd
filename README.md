@@ -8,7 +8,7 @@
 
 [![Last Modified][badges/last-modified]][commits]
 
-Locally download Roblox deployments (Windows/Mac) directly from your browser!
+Locally download Roblox deployments (Windows/Mac/Web) directly from your browser!
 
 Hosted officially @ <https://rdd.latte.to>
 
@@ -26,6 +26,7 @@ RDD can assemble plain resources directly from Roblox's [`setup`](https://setup.
     * WindowsStudio64
     * MacPlayer
     * MacStudio
+    * WebClientApp
 
     Extra Notes:
     * If `channel` isn't provided, it will default to "LIVE" (the production channel)
@@ -33,7 +34,7 @@ RDD can assemble plain resources directly from Roblox's [`setup`](https://setup.
 
 ### Extras
 
-* [JSZip](https://github.com/Stuk/jszip) (Used for `WindowsPlayer`/`WindowsStudio` file extraction/generation)
+* [JSZip](https://github.com/Stuk/jszip) (Used for `WindowsPlayer`/`WindowsStudio`/`WebClientApp` file extraction/generation)
 
 ## License
 
