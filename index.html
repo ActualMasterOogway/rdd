@@ -32,6 +32,37 @@
                 line-height: 24px;
             }
 
+            #progressContainer {
+                border-width: thin;
+                border-style: solid;
+                border-radius: 4px;
+                margin-left: 10px;
+                margin-top: 15px;
+                margin-bottom: 15px;
+                width: fit-content;
+                min-width: 320px;
+                max-width: 600px;
+                padding: 14px 18px;
+                line-height: 22px;
+            }
+
+            #progressStatus {
+                font-weight: bold;
+            }
+
+            #progressBar {
+                width: 100%;
+                height: 16px;
+                margin-top: 6px;
+                margin-bottom: 4px;
+                display: block;
+            }
+
+            #progressDetails {
+                font-size: 0.85em;
+                opacity: 0.85;
+            }
+
             output {
                 white-space: pre-wrap;
             }
@@ -69,26 +100,36 @@
                     <option value="WebClientApp">WebClientApp</option>
                 </select>
                 <br>
-                <label for="arch">Binary Arch:</label>
-                <select id="arch" name="arch"></select>
-                <br>
+                <div id="archRow">
+                    <label for="arch">Binary Arch:</label>
+                    <select id="arch" name="arch"></select>
+                </div>
                 <label for="channel">Channel Name:</label>
                 <input id="channel" name="channel" type="text" placeholder="LIVE">
                 <br>
                 <label for="version">Version Hash:</label>
-                <input id="version" name="version" type="text"> <b>&#40;Optional&#41;</b>
+                <input id="version" name="version" type="text" placeholder="version-xxxxxxxxxxxxxxxx"> <b>&#40;Optional&#41;</b>
                 <br><br>
                 <label for="compressZip">Compress Output Zip:</label>
                 <input id="compressZip" name="compressZip" type="checkbox">
                 <br>
+                <small style="opacity: 0.75;">&#40;Note: Compression is CPU/RAM heavy; leaving unchecked is much faster&#41;</small>
+                <br><br>
                 <label for="compressionLevel">Zip Compression Level (1-9):</label>
-                <input id="compressionLevel" name="compressionLevel" type="number" min="1" max="9" value="5">
+                <input id="compressionLevel" name="compressionLevel" type="number" min="1" max="9" value="5" disabled>
                 <br><br>
                 <button type="button" onclick="downloadFromForm();">Download</button>
                 <button type="button" onclick="copyPermLink();">Copy Permanent Link</button>
                 <br>
             </form>
             <br>
+        </div>
+
+        <!-- Progress container -->
+        <div hidden id="progressContainer">
+            <div id="progressStatus">Ready</div>
+            <progress id="progressBar" value="0" max="100"></progress>
+            <div id="progressDetails"></div>
         </div>
 
         <output id="consoleText"></output>
