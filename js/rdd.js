@@ -756,8 +756,15 @@ async function downloadZipsFromManifest(manifestBody) {
         return;
     }
 
-    const packages = pkgManifestLines.filter(line => line.endsWith(".zip"));
-    log(`[+] Found ${packages.length} packages for BinaryType \`${binaryType}\`..`);
+    const packages = [];
+    let totalExpectedBytes = 0;
+    for (let i = 1; i < pkgManifestLines.length; i++) {
+        if (pkgManifestLines[i].endsWith(".zip")) {
+            packages.push(pkgManifestLines[i]);
+            totalExpectedBytes += parseInt(pkgManifestLines[i + 2], 10) || 0;
+        }
+    }
+    log(`[+] Found ${packages.length} packages (${formatBytes(totalExpectedBytes)}) for BinaryType \`${binaryType}\`..`);
 
     zip = new JSZip();
 
@@ -777,39 +784,27 @@ async function downloadZipsFromManifest(manifestBody) {
 
     function updateDownloadStats() {
         let activeBytesSum = 0;
-        let activeFractions = 0;
-
         for (const pkg in activePackages) {
-            const info = activePackages[pkg];
-            activeBytesSum += info.loaded || 0;
-            if (info.total > 0) {
-                activeFractions += Math.min(1, info.loaded / info.total);
-            } else if (info.loaded > 0) {
-                activeFractions += 0.5;
-            }
+            activeBytesSum += activePackages[pkg].loaded || 0;
         }
 
         const currentTotalBytes = totalBytesLoaded + activeBytesSum;
         estimator.update(currentTotalBytes);
         const stats = estimator.getStats();
 
-        const continuousProgress = completedPackages + activeFractions;
-        const percent = Math.min(99.9, (continuousProgress / packages.length) * 100);
+        const percent = totalExpectedBytes > 0
+            ? Math.min(99.9, (currentTotalBytes / totalExpectedBytes) * 100)
+            : Math.min(99.9, (completedPackages / packages.length) * 100);
 
-        let etaStr = "--:--";
-        if (completedPackages > 0 && stats.speed > 0) {
-            const avgBytesPerPkg = totalBytesLoaded / completedPackages;
-            const estRemainingBytes = Math.max(0, (packages.length - completedPackages) * avgBytesPerPkg - activeBytesSum);
-            etaStr = formatTime(estRemainingBytes / stats.speed);
-        } else if (stats.speed > 0 && currentTotalBytes > 0) {
-            const estTotalBytes = (currentTotalBytes / Math.max(1, percent)) * 100;
-            etaStr = formatTime(Math.max(0, estTotalBytes - currentTotalBytes) / stats.speed);
-        }
+        const remainingBytes = Math.max(0, totalExpectedBytes - currentTotalBytes);
+        const etaStr = (stats.speed > 0 && totalExpectedBytes > 0)
+            ? formatTime(remainingBytes / stats.speed)
+            : "--:--";
 
         updateProgress(
             percent,
             `Downloading & extracting (${completedPackages}/${packages.length})`,
-            `${percent.toFixed(1)}% | ${completedPackages}/${packages.length} pkgs | ${formatBytes(currentTotalBytes)} | ${formatBytes(stats.speed)}/s | ETA: ${etaStr}`
+            `${percent.toFixed(1)}% | ${completedPackages}/${packages.length} pkgs | ${formatBytes(currentTotalBytes)} / ${formatBytes(totalExpectedBytes)} | ${formatBytes(stats.speed)}/s | ETA: ${etaStr}`
         );
     }
 
